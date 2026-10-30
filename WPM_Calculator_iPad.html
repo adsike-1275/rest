@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>WPM計算</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    background: #f5f5f7;
+    color: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+  }
+  .card {
+    width: min(700px, 100%);
+    background: white;
+    border-radius: 28px;
+    padding: 32px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.10);
+  }
+  h1 {
+    text-align: center;
+    font-size: clamp(32px, 7vw, 52px);
+    margin: 0 0 28px;
+  }
+  .label {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 20px 0 8px;
+  }
+  input {
+    width: 100%;
+    padding: 18px;
+    font-size: 28px;
+    border: 2px solid #ccc;
+    border-radius: 16px;
+    text-align: center;
+    outline: none;
+    background: #fff !important;
+    color: #111 !important;
+    -webkit-text-fill-color: #111 !important;
+    caret-color: #111;
+    opacity: 1 !important;
+    color-scheme: light;
+  }
+  input::placeholder {
+    color: #777 !important;
+    -webkit-text-fill-color: #777 !important;
+    opacity: 1;
+  }
+  input:focus { border-color: #111; }
+  .buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 22px;
+  }
+  button {
+    border: 0;
+    border-radius: 16px;
+    padding: 18px 12px;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #111;
+    color: white;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button.secondary {
+    background: #ddd;
+    color: #111;
+  }
+  .result {
+    margin-top: 28px;
+    padding: 24px;
+    border-radius: 22px;
+    background: #f0f0f0;
+    text-align: center;
+  }
+  .result-title {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  #wpm {
+    font-size: clamp(56px, 15vw, 110px);
+    line-height: 1;
+    font-weight: 800;
+    margin: 12px 0;
+  }
+  .unit { font-size: 22px; }
+  .formula {
+    text-align: center;
+    margin-top: 20px;
+    color: #555;
+    font-size: 16px;
+  }
+  .timer {
+    margin-top: 22px;
+    text-align: center;
+    font-size: 42px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+  .timer-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .timer-buttons button {
+    font-size: 17px;
+    padding: 14px 5px;
+  }
+  @media (max-width: 500px) {
+    .card { padding: 22px; }
+    .buttons { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>WPM計算</h1>
+
+  <div class="label">英単語数</div>
+  <input id="words" type="number" inputmode="decimal" min="0" step="1" placeholder="例：300">
+
+  <div class="label">読んだ時間（秒）</div>
+  <input id="seconds" type="number" inputmode="decimal" min="0" step="0.1" placeholder="例：90">
+
+  <div class="buttons">
+    <button onclick="calculate()">WPMを計算</button>
+    <button class="secondary" onclick="clearAll()">クリア</button>
+  </div>
+
+  <div class="result">
+    <div class="result-title">あなたのWPM</div>
+    <div id="wpm">0</div>
+    <div class="unit">Words Per Minute</div>
+  </div>
+
+  <div class="formula">
+    WPM ＝ 英単語数 ÷ 読んだ時間（秒） × 60
+  </div>
+
+  <div class="timer" id="timer">00:00.0</div>
+  <div class="timer-buttons">
+    <button onclick="startTimer()">スタート</button>
+    <button onclick="stopTimer()">ストップ</button>
+    <button class="secondary" onclick="resetTimer()">リセット</button>
+  </div>
+</main>
+
+<script>
+let startTime = 0;
+let elapsed = 0;
+let timerId = null;
+
+function calculate() {
+  const words = Number(document.getElementById("words").value);
+  const seconds = Number(document.getElementById("seconds").value);
+
+  if (words <= 0 || seconds <= 0) {
+    document.getElementById("wpm").textContent = "0";
+    return;
+  }
+
+  const wpm = (words / seconds) * 60;
+  document.getElementById("wpm").textContent =
+    Number.isInteger(wpm) ? wpm : wpm.toFixed(1);
+}
+
+function clearAll() {
+  document.getElementById("words").value = "";
+  document.getElementById("seconds").value = "";
+  document.getElementById("wpm").textContent = "0";
+}
+
+function updateTimer() {
+  elapsed = performance.now() - startTime;
+  const totalSeconds = elapsed / 1000;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  const tenths = Math.floor((totalSeconds % 1) * 10);
+
+  document.getElementById("timer").textContent =
+    String(minutes).padStart(2, "0") + ":" +
+    String(seconds).padStart(2, "0") + "." +
+    tenths;
+}
+
+function startTimer() {
+  if (timerId !== null) return;
+  startTime = performance.now() - elapsed;
+  timerId = setInterval(updateTimer, 50);
+}
+
+function stopTimer() {
+  if (timerId !== null) {
+    clearInterval(timerId);
+    timerId = null;
+    updateTimer();
+
+    const seconds = elapsed / 1000;
+    if (seconds > 0) {
+      document.getElementById("seconds").value = seconds.toFixed(1);
+    }
+  }
+}
+
+function resetTimer() {
+  if (timerId !== null) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+  elapsed = 0;
+  document.getElementById("timer").textContent = "00:00.0";
+}
+</script>
+</body>
+</html>
